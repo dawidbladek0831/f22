@@ -45,9 +45,8 @@ The top quality attributes for the System are critical drivers for its architect
 # 2. Architecture Constraints
 _This section delineates the significant limitations and restrictions that exert influence over the architectural design and subsequent implementation of the system._
 
-The system must function as a microservice, promoting loose coupling between services.
-
-It must use standard protocols such as OAuth2 and OpenID Connect to ensure security.
+- The system must function as a microservice, promoting loose coupling between services.
+- It must use standard protocols such as OAuth2 and OpenID Connect to ensure security.
 
 # 3. System Scope and Context
 _This section precisely defines the boundaries of the system and illustrates its interactions with external sytems._
@@ -80,6 +79,14 @@ This diagram depicts the main systems: Feedback System and IAM.
 | Identity and Access Management (IAM) system | System responsible for authentication and user management. |
 
 ## 5.1. Level 1: Container Level - Feedback System
+The Feedback System is a microservice that provides feedback capabilities for various "domain objects" within a larger ecosystem. A domain object is a target entity identified by a domainObjectType (e.g., "POST") and a domainObjectId (a unique ID within that type). The system allows users to express their opinions through reactions, ratings, and comments.
+- A Reaction is an interaction like 'LIKE' or 'DISLIKE'.
+- A Rating is a numerical score from 1 to 5.
+- A Comment is a text message attached to a domain object.
+
+The system serves as a Resource Server, utilizing scopes to manage access permissions for these feedback types.
+
+
 This diagram provides a clear overview of the system's major deployable units and their communication pathways.
 
 ![Alt text](./export/diagram-container_feedbackSystem.drawio.png)
@@ -95,12 +102,22 @@ This diagram provides a clear overview of the system's major deployable units an
 Provides system functionality to user.
 Project is on [Github](https://github.com/dawidbladek0831/f22-feedback)
 
-#### Design
-To model the domain, the DDD (Domain-Driven Design) approach was applied, complemented by Event Storming. More information in Attachments.
+![diagram-component_textToSpeechSystem_synthesizer.drawio.png](export/diagram-component_textToSpeechSystem_synthesizer.drawio.png)
 
-#### Components
-The service breaks down in 3 components.
-##### Ratings Component
+#### 5.1.1.1. Design
+To model the domain, the DDD (Domain-Driven Design) approach was applied, complemented by Event Storming. More information in [Attachments](#13-attachments).
+
+#### 5.1.1.2. REST API documentation
+Comprehensive documentation for the REST API can be accessed via the following [link](https://www.postman.com/dawidbladek0831/f22).
+
+#### 5.1.1.3. Components
+The service breaks down in 3 components:
+- Rating Component
+- Reactions Component
+- Comments Component
+
+
+#### 5.1.1.3.1 Level 3: Code Level - Rating Component
 The Ratings API provides endpoints for managing user ratings
 ```
 GET /ratings?userId={userId}&objectType={domainObjectType}&objectId={domainObjectId} - retrieve a user's ratings -> RATING DTO[]
@@ -111,7 +128,46 @@ GET /objects/{domainObjectType}/{domainObjectId}/ratings - retrieve the aggregat
 GET /users/{userId}/ratings - retrieve all ratings from a specific user -> RATIONG DTO[] - ratings from USER RATING READ MODEL
 ```
 
-##### Reactions Component
+Domain Model
+```json
+// RATING - DOMAIN MODEL
+{
+  "id": "string (UUID)",
+  "domainObjectType": "string (e.g., 'POST')",
+  "domainObjectId":"string (external ID)",
+  "userId":"string (external ID)",
+  "rating":"integer",
+}
+```
+
+Read Models
+```json
+// DOMAIN OBJECT RATING - READ MODEL
+{
+  "id": "string (UUID)",
+  "domainObjectType": "string (e.g., 'POST')",
+  "domainObjectId":"string (external ID)",
+  "rating":"integer (sum divided by quantity)",
+  "sum":"integer",
+  "quantity": "integer"
+}
+
+// USER REACTIONS - READ MODEL
+{
+  "userId":"string (external ID)",
+  "reactions":[
+    {
+      "id": "string (UUID)",
+      "domainObjectType": "string (e.g., 'POST')",
+      "domainObjectId":"string (external ID)",
+      "userId":"string (external ID)",
+      "rating":"integer",
+    },
+  ]
+}
+```
+
+#### 5.1.1.3.2 Level 3: Code Level - Reactions Component
 The Reactions API provides endpoints for managing user reactions
 ```
 GET /reactions?userId={userId}&objectType={domainObjectType}&objectId={domainObjectId} - retrieve reactions -> REACTION DTO[]
@@ -122,7 +178,48 @@ GET /objects/{domainObjectType}/{domainObjectId}/reactions - retrieve reactions 
 GET /users/{userId}/reactions - retrieve all reactions from a specific user -> REACTION DTO[] - reactions from USER REACTION - READ MODEL
 ```
 
-##### Comments Component
+Domain Model
+```json
+// REACTION - DOMAIN MODEL
+{
+	"id": "string (UUID)", 
+	"domainObjectType": "string (e.g., 'POST')",
+	"domainObjectId":"string (external ID)",
+	"userId":"string (external ID)",
+	"reactions":["string (e.g., 'LIKE', 'AWSOME')"]
+}
+```
+
+Read Models
+```json
+// DOMAIN OBJECT REACTION - READ MODEL
+{
+	"id": "string (UUID)", 
+	"domainObjectType": "string (e.g., 'POST')",
+	"domainObjectId":"string (external ID)",
+	"reactions":[
+		"string (e.g., 'LIKE', 'AWSOME')": "ingeter (number of reactions)",
+	]
+}
+
+// USER REACTION - READ MODEL
+{
+	"userId":"string (external ID)",
+	"reactions":[
+		{
+			"id": "string (UUID)", 
+			"domainObjectType": "string (e.g., 'POST')",
+			"domainObjectId":"string (external ID)",
+			"userId":"string (external ID)",
+			"reactions":["string (e.g., 'LIKE', 'AWSOME')"]
+		}
+	]
+}
+```
+
+
+#### 5.1.1.3.3 Level 3: Code Level - Comments Component
+
 The Comments API provides endpoints for managing user comments
 ```
 GET /comments?userId={userId}&objectType={domainObjectType}&objectId={domainObjectId} - retrieve a comments -> COMMENT DTO[]
@@ -138,18 +235,41 @@ POST /comments/{commentId}/reports - create a report for a comment -> REPORT DTO
 POST /comments/{commentId}/reports/{reportId}/rejections - reject a report -> REPORT DTO
 POST /comments/{commentId}/reports/{reportId}/approvals - approve a report -> REPORT DTO
 ```
-#### REST API documentation
-Comprehensive documentation for the REST API can be accessed via the following [link](https://www.postman.com/dawidbladek0831/f22).
+Domain Model
+```json
+// COMMENT - DOMAIN MODEL
+{
+  "id": "string (UUID)",
+  "domainObjectType": "string (e.g., 'POST', 'PRODUCT', 'ARTICLE')",
+  "domainObjectId": "string (external ID)",
+  "userId": "string (external ID)",
+  "content": "string (the actual comment text)",
+  "parentId": "string (UUID of the parent comment, null for top-level comments)",
+  "state": "string ('PUBLISHED', 'HIDDEN')"
+}
+```
+
+Read Models
+```json
+// DOMAIN OBJECT COMMENT - READ MODEL
+{
+  "id": "string (UUID)",
+  "domainObjectType": "string (e.g., 'POST', 'PRODUCT', 'ARTICLE')",
+  "domainObjectId": "string (external ID)",
+  "comments":[]
+}
+```
+
 
 ## 5.2. Level 1: Container Level - Identity and Access Management (IAM) System
 The system integrates Keycloak as the Identity and Access Management (IAM) solution, eliminating the need to develop custom authentication and authorization mechanisms. This choice reduces development effort, enhances security, and ensures compliance with modern authentication standards like OAuth2 and OpenID Connect.
 
 
 # 6. Runtime View
-_This section details the dynamic behavior of the TTS system by illustrating how its building blocks interact over time to fulfill key use cases and scenarios. It provides insights into the flow of data and control, which static diagrams alone cannot fully capture._
+_This section details the dynamic behavior of the system by illustrating how its building blocks interact over time to fulfill key use cases and scenarios._
 
 # 7. Deployment View
-_This section shows the technical infrastructure where the Feedback System is deployed._
+_This section shows the technical infrastructure where the System is deployed._
 
 # 7.1. Development environment
 ![Alt text](./export/diagram-deployment_development_feedbackSystem.drawio.png)
