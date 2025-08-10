@@ -1,4 +1,4 @@
-# Text-to-Speech System Architecture
+# Feedback System Architecture
 _This document outlines the architectural blueprint for system, providing a structured and comprehensive overview of its design, components, and operational considerations. 
 The report leverages the arc42 template for its standardized, pragmatic structure and integrates the C4 model for clear, hierarchical visual representations of the architecture._
 
